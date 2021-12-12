@@ -1,6 +1,6 @@
 package main
 
-import "github.com/skanehira/rtty/cmd"
+import "rtty/cmd"
 
 func main() {
 	cmd.Execute()

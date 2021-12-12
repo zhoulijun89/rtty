@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"crypto/md5"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -25,6 +26,9 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/websocket"
 )
+
+//go:embed public/login.html
+var loginHTML string
 
 //go:embed public/index.html
 var indexHTML string
@@ -222,6 +226,17 @@ var runCmd = &cobra.Command{
 		var serverErr error
 		mux := http.NewServeMux()
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte(loginHTML))
+		})
+		mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+			password := r.PostFormValue("password")
+			key := "root_" + time.Now().Format("2006-01-02")
+			md5Str := fmt.Sprintf("%x", md5.Sum([]byte(key)))
+			log.Println(fmt.Sprintf("密钥为：%s,加密后为：%s", key, md5Str))
+			if password != md5Str {
+				http.Error(w, "用户名或密码错误!", 401)
+				return
+			}
 			_, _ = w.Write([]byte(indexHTML))
 		})
 		sub, err := fs.Sub(public, "public")
@@ -301,7 +316,7 @@ var runCmd = &cobra.Command{
 
 func init() {
 	runCmd.PersistentFlags().IntP("port", "p", 9999, "server port")
-	runCmd.PersistentFlags().StringP("addr", "a", "", "server address")
+	runCmd.PersistentFlags().StringP("addr", "a", "127.0.0.1", "server address")
 	runCmd.PersistentFlags().String("font", "", "font")
 	runCmd.PersistentFlags().String("font-size", "", "font size")
 	runCmd.PersistentFlags().BoolP("view", "v", false, "open browser")
